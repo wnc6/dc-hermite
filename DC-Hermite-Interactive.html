@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dual Contouring of Hermite Data</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#f5f3f0;color:#2a2a2a;font-family:'JetBrains Mono',monospace;overflow:hidden;width:100vw;height:100vh;display:flex;}
+  #cp{width:170px;min-width:130px;height:100vh;overflow-y:auto;padding:8px;background:#fff;border-right:1px solid rgba(0,0,0,0.08);flex-shrink:0;}
+  #cp::-webkit-scrollbar{width:3px;}
+  #cp::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.12);border-radius:2px;}
+  #cp h1{font-size:10px;font-weight:600;color:#1a1a1a;margin-bottom:1px;}
+  #cp .sub{font-size:7.5px;color:rgba(0,0,0,0.35);margin-bottom:5px;}
+  .sec{margin-top:5px;padding-top:5px;border-top:1px solid rgba(0,0,0,0.06);}
+  .sec:first-of-type{margin-top:0;padding-top:0;border-top:none;}
+  .sh{font-size:7.5px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;display:flex;align-items:center;gap:4px;}
+  .sh .n{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;font-size:7px;font-weight:700;color:#fff;flex-shrink:0;}
+  .sd{font-size:7px;color:rgba(0,0,0,0.28);margin-bottom:3px;line-height:1.3;font-weight:300;}
+  #cp label{display:flex;align-items:center;gap:4px;margin-bottom:1px;cursor:pointer;user-select:none;line-height:1.2;font-size:9px;color:#444;}
+  #cp input[type="checkbox"]{accent-color:#0d9488;width:10px;height:10px;flex-shrink:0;}
+  .sr{display:flex;align-items:center;gap:4px;margin:3px 0 1px 0;}
+  .sr input[type="range"]{flex:1;height:3px;accent-color:#0d9488;}
+  .sl{font-size:8px;color:#888;min-width:18px;text-align:right;}
+  .ib{background:rgba(0,0,0,0.025);border-radius:4px;padding:4px 6px;margin-top:5px;}
+  .ib .sr{margin:2px 0 0 0;}
+  .presets{margin-top:5px;padding-top:5px;border-top:1px solid rgba(0,0,0,0.06);}
+  .presets .sh{margin-bottom:4px;}
+  .preset-btn{display:block;width:100%;text-align:left;padding:3px 5px;margin-bottom:2px;border:1px solid rgba(0,0,0,0.08);border-radius:4px;background:rgba(0,0,0,0.015);cursor:pointer;font-family:inherit;font-size:8.5px;line-height:1.3;color:#333;transition:all 0.15s;}
+  .preset-btn:hover{background:rgba(13,148,136,0.06);border-color:rgba(13,148,136,0.25);}
+  .preset-btn .pb-num{font-weight:700;color:#0d9488;margin-right:2px;}
+  .preset-btn .pb-title{font-weight:600;}
+  .preset-btn .pb-desc{display:block;font-size:7px;color:rgba(0,0,0,0.35);margin-top:1px;font-weight:300;}
+  #views{flex:1;display:flex;flex-direction:column;height:100vh;}
+  .vw{position:relative;overflow:hidden;}
+  #mv{flex:3;background:#fff;}
+  #dv{flex:2;min-height:0;background:#fff;border-top:1px solid rgba(0,0,0,0.08);position:relative;}
+  canvas{display:block;}
+  #dl{position:absolute;top:8px;left:8px;z-index:10;pointer-events:none;font-size:9px;font-weight:600;color:#1a1a1a;}
+  #dl span{font-weight:300;color:#888;}
+  #di{position:absolute;bottom:8px;left:8px;right:8px;z-index:10;pointer-events:none;font-size:8px;line-height:1.4;color:#555;background:rgba(255,255,255,0.88);border-radius:4px;padding:6px 8px;border:1px solid rgba(0,0,0,0.06);display:none;}
+  .val{color:#0d9488;font-weight:500;}
+  .pn{position:absolute;background:rgba(255,255,255,0.92);border:1px solid rgba(0,0,0,0.08);border-radius:5px;z-index:10;color:#444;box-shadow:0 1px 6px rgba(0,0,0,0.05);font-size:9px;}
+  #lg{bottom:8px;left:8px;padding:6px 10px;line-height:1.7;pointer-events:none;}
+  .lr{display:flex;align-items:center;gap:5px;}
+  .dt{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+  .ls{width:10px;height:2px;border-radius:2px;flex-shrink:0;}
+  .qs{width:8px;height:5px;border-radius:2px;flex-shrink:0;opacity:0.7;}
+  @media(max-width:900px){
+    #cp{width:150px;min-width:110px;padding:6px;}
+    #cp h1{font-size:9px;}
+    .sh{font-size:7px;} #cp label{font-size:8px;}
+    .sd{font-size:6.5px;}
+    .preset-btn{font-size:8px;} .preset-btn .pb-desc{font-size:6.5px;}
+    #lg{padding:4px 6px;font-size:8px;}
+  }
+  @media(max-width:700px){
+    body{flex-direction:column;overflow:auto;}
+    #cp{width:100%;height:auto;max-height:none;border-right:none;border-bottom:1px solid rgba(0,0,0,0.08);padding:10px 12px;}
+    #cp h1{font-size:12px;}
+    .sh{font-size:8px;} #cp label{font-size:10px;}
+    .sd{font-size:8px;display:block;}
+    .preset-btn{font-size:10px;padding:6px 8px;} .preset-btn .pb-desc{font-size:8px;display:block;}
+    #views{height:auto;min-height:0;}
+    #mv{height:45vh;flex:none;}
+    #dv{height:40vh;flex:none;}
+    #lg{padding:4px 6px;font-size:8px;}
+    .sr input[type="range"]{height:6px;}
+  }
+</style>
+</head>
+<body>
+<div id="cp">
+  <h1>Dual Contouring of Hermite Data</h1>
+  <div class="sub">Ju, Losasso, Schaefer, Warren (2002)</div>
+  <div style="display:none;"><input type="range" id="octantSlider" min="0" max="0" value="0"><span id="octantSliderLabel">all</span></div>
+
+  <div class="ib">
+    <div style="font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:rgba(0,0,0,0.28);">Controls</div>
+    <div class="sr"><span style="font-size:8px;color:#888;">Cube</span><input type="range" id="cubeSlider" min="0" max="0" value="0" style="flex:1;"><span class="sl" id="cubeSliderLabel">all</span></div>
+  </div>
+
+  <div class="presets">
+    <div class="sh"><span class="n" style="background:#0d9488">&#9654;</span><span style="color:#0d9488">Figure Panels</span></div>
+    <button class="preset-btn" onclick="applyPreset(0)" style="border-left:3px solid #555;"><span class="pb-num">(a)</span><span class="pb-title">Isosurface &amp; Hermite Data</span></button>
+    <button class="preset-btn" onclick="applyPreset(1)" style="border-left:3px solid #059669;"><span class="pb-num">(b)</span><span class="pb-title">QEF Vertex Per Cube</span></button>
+    <button class="preset-btn" onclick="applyPreset(2)" style="border-left:3px solid #db2777;"><span class="pb-num">(c)</span><span class="pb-title">Quad Per Sign-Change Edge</span></button>
+    <button class="preset-btn" onclick="applyPreset(3)" style="border-left:3px solid #dc2626;"><span class="pb-num">(d)</span><span class="pb-title">Edge Sign Safety Test</span></button>
+    <button class="preset-btn" onclick="applyPreset(4)" style="border-left:3px solid #6366f1;"><span class="pb-num">(e)</span><span class="pb-title">Octree Collapse</span></button>
+  </div>
+
+  <div class="sec">
+    <div class="sh"><span class="n" style="background:#555">a</span><span style="color:#555">Isosurface &amp; Hermite</span></div>
+    <label><input type="checkbox" id="togGrid" checked> Grid structure</label>
+    <label><input type="checkbox" id="togCorners" checked> Corner signs</label>
+    <label><input type="checkbox" id="togSphere" checked> True isosurface</label>
+    <label><input type="checkbox" id="togSignChange" checked> Sign-change edges</label>
+    <label><input type="checkbox" id="togHermite" checked> Hermite data (p&#7522;, n&#7522;)</label>
+  </div>
+  <div class="sec">
+    <div class="sh"><span class="n" style="background:#059669">b</span><span style="color:#059669">QEF Vertex</span></div>
+    <label><input type="checkbox" id="togQEF" checked> QEF vertices</label>
+    <label><input type="checkbox" id="togTangentPlanes"> Tangent planes</label>
+    <label><input type="checkbox" id="togErrorLines"> Error lines</label>
+    <label><input type="checkbox" id="togMassPoint"> Mass point</label>
+    <label><input type="checkbox" id="togCubeBounds"> Cube bounds</label>
+    <label><input type="checkbox" id="togErrorField"> Residual heatmap</label>
+  </div>
+  <div class="sec">
+    <div class="sh"><span class="n" style="background:#db2777">c</span><span style="color:#db2777">Dual Mesh</span></div>
+    <label><input type="checkbox" id="togQuads" checked><span style="color:#db2777"> Generated quads</span></label>
+  </div>
+  <div class="sec">
+    <div class="sh"><span class="n" style="background:#dc2626">d</span><span style="color:#dc2626">Safety Test</span></div>
+    <label><input type="checkbox" id="togSafetyTest"> Topology safety</label>
+    <label><input type="checkbox" id="togForcedCollapse"><span style="color:#dc2626"> Forced collapse</span></label>
+  </div>
+  <div class="sec">
+    <div class="sh"><span class="n" style="background:#6366f1">e</span><span style="color:#6366f1">Octree Collapse</span></div>
+    <label><input type="checkbox" id="togCoarseGrid"> Coarse octree</label>
+    <label><input type="checkbox" id="togCollapsedQEF"> Collapsed vertices</label>
+    <label><input type="checkbox" id="togCollapsedQuads"> Safe collapse quads</label>
+    <label><input type="checkbox" id="togResidualColor"> Collapse error</label>
+  </div>
+</div>
+<div id="views">
+  <div id="mv" class="vw">
+    <div id="lg" class="pn">
+      <div class="lr"><div class="dt" style="background:#2563eb"></div> Outside (+)</div>
+      <div class="lr"><div class="dt" style="background:#ea580c"></div> Inside (&minus;)</div>
+      <div class="lr"><div class="ls" style="background:#dc2626"></div> Sign-change edge</div>
+      <div class="lr"><div class="dt" style="background:#ca8a04"></div> Hermite data</div>
+      <div class="lr"><div class="dt" style="background:#059669"></div> QEF vertex</div>
+      <div class="lr"><div class="qs" style="background:#db2777"></div><span style="color:#db2777">Dual quad</span></div>
+      <div class="lr"><div class="qs" style="background:#6366f1"></div><span style="color:#6366f1">Safe collapse</span></div>
+      <div class="lr"><div class="qs" style="background:#dc2626"></div><span style="color:#dc2626">Forced collapse</span></div>
+      <div class="lr"><div class="ls" style="background:#dc2626;height:3px;"></div><span style="color:#dc2626">Failing edge</span></div>
+    </div>
+  </div>
+  <div id="dv" class="vw">
+    <div id="dl">Isolated Cube <span>&mdash; select with slider</span></div>
+    <div id="di"></div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+function mkR(el,bg){var r=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true,alpha:true});r.setPixelRatio(Math.min(devicePixelRatio,2));r.setClearColor(0x000000,0);el.insertBefore(r.domElement,el.firstChild);return r;}
+function mkL(s){s.add(new THREE.AmbientLight(0xffffff,0.7));var d=new THREE.DirectionalLight(0xffffff,0.5);d.position.set(5,8,5);s.add(d);}
+var mEl=document.getElementById('mv'),dEl=document.getElementById('dv');
+var mR=mkR(mEl,0xf5f3f0),dR=mkR(dEl,0xeceae6);
+var mS=new THREE.Scene(),dS=new THREE.Scene();mkL(mS);mkL(dS);
+var mC=new THREE.PerspectiveCamera(40,1,0.1,100),dC=new THREE.PerspectiveCamera(40,1,0.1,100);
+var G={},DG={};
+var aL='grid sphere signChange hermite qef quads corners tangentPlanes errorLines massPoint cubeBounds errorField coarseGrid collapsedQEF collapsedQuads forcedCollapse residualColor safetyTest'.split(' ');
+var dLy='grid sphere corners signChange hermite qef quads tangentPlanes errorLines massPoint cubeBounds errorField collapsedQEF collapsedQuads forcedCollapse coarseGrid residualColor safetyTest'.split(' ');
+aL.forEach(function(n){G[n]=new THREE.Group();G[n].visible=false;mS.add(G[n]);});
+dLy.forEach(function(n){DG[n]=new THREE.Group();DG[n].visible=false;dS.add(DG[n]);});
+'grid sphere signChange hermite qef quads corners'.split(' ').forEach(function(n){G[n].visible=true;if(DG[n])DG[n].visible=true;});
+
+/* SDF: torus */
+var sdfType='torus';
+var TR=2.0,Tr=1.2;
+function sdf(x,y,z){var q=Math.sqrt(x*x+z*z)-TR;return Math.sqrt(q*q+y*y)-Tr;}
+function sdfN(x,y,z){var e=1e-3;var dx=sdf(x+e,y,z)-sdf(x-e,y,z),dy=sdf(x,y+e,z)-sdf(x,y-e,z),dz=sdf(x,y,z+e)-sdf(x,y,z-e);var l=Math.sqrt(dx*dx+dy*dy+dz*dz);return l>0?new THREE.Vector3(dx/l,dy/l,dz/l):new THREE.Vector3(0,1,0);}
+
+/* Grid 7x7x7 from -3..3 */
+var gMin=-3,gMax=3,S=1,cPos=[],cSgn=[];
+for(var zz=gMin;zz<=gMax;zz+=S)for(var yy=gMin;yy<=gMax;yy+=S)for(var xx=gMin;xx<=gMax;xx+=S){cPos.push(new THREE.Vector3(xx,yy,zz));cSgn.push(sdf(xx,yy,zz)>0);}
+var NN=7;function idx(x,y,z){return z*NN*NN+y*NN+x;}
+var sGe=new THREE.SphereGeometry(0.055,10,10);
+var mO=new THREE.MeshPhongMaterial({color:0x2563eb,emissive:0x0a1a4a});
+var mI=new THREE.MeshPhongMaterial({color:0xea580c,emissive:0x4a1a00});
+cPos.forEach(function(p,i){
+  var cv=document.createElement('canvas');cv.width=64;cv.height=64;var cx=cv.getContext('2d');
+  cx.beginPath();cx.arc(32,32,28,0,Math.PI*2);cx.fillStyle=cSgn[i]?'#2563eb':'#ea580c';cx.fill();
+  cx.fillStyle='#fff';cx.font='bold 44px monospace';cx.textAlign='center';cx.textBaseline='middle';
+  cx.fillText(cSgn[i]?'+':'\u2212',32,34);
+  var mat=new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false});
+  var sp=new THREE.Sprite(mat);sp.position.set(p.x,p.y,p.z);sp.scale.set(0.16,0.16,1);
+  G.corners.add(sp);
+});
+var gLM=new THREE.LineBasicMaterial({color:0x000000,opacity:0.07,transparent:true});
+for(var iz=0;iz<NN;iz++)for(var iy=0;iy<NN;iy++)for(var ix=0;ix<NN;ix++){var i=idx(ix,iy,iz);if(ix<NN-1)G.grid.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([cPos[i],cPos[idx(ix+1,iy,iz)]]),gLM));if(iy<NN-1)G.grid.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([cPos[i],cPos[idx(ix,iy+1,iz)]]),gLM));if(iz<NN-1)G.grid.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([cPos[i],cPos[idx(ix,iy,iz+1)]]),gLM));}
+
+/* Sign-change & Hermite */
+var scE=[],hP=[];
+function eK(a,b){return Math.min(a,b)+'-'+Math.max(a,b);}
+function pE(i1,i2){if(cSgn[i1]===cSgn[i2])return;var p1=cPos[i1],p2=cPos[i2],t0=0,t1=1;for(var ii=0;ii<20;ii++){var tm=(t0+t1)/2,px=p1.x+(p2.x-p1.x)*tm,py=p1.y+(p2.y-p1.y)*tm,pz=p1.z+(p2.z-p1.z)*tm;if((sdf(px,py,pz)>0)===cSgn[i1])t0=tm;else t1=tm;}var t=(t0+t1)/2;var hp=new THREE.Vector3(p1.x+(p2.x-p1.x)*t,p1.y+(p2.y-p1.y)*t,p1.z+(p2.z-p1.z)*t);scE.push({i1:i1,i2:i2,key:eK(i1,i2)});hP.push({pos:hp,normal:sdfN(hp.x,hp.y,hp.z),edgeKey:eK(i1,i2)});}
+for(var iz=0;iz<NN;iz++)for(var iy=0;iy<NN;iy++)for(var ix=0;ix<NN;ix++){var i=idx(ix,iy,iz);if(ix<NN-1)pE(i,idx(ix+1,iy,iz));if(iy<NN-1)pE(i,idx(ix,iy+1,iz));if(iz<NN-1)pE(i,idx(ix,iy,iz+1));}
+var cyG=new THREE.CylinderGeometry(0.018,0.018,1,6),cyM=new THREE.MeshPhongMaterial({color:0xdc2626,emissive:0x4a0808});
+function drawCyl(grp,p1,p2,geo,mat){var mid=p1.clone().add(p2).multiplyScalar(0.5),dir=p2.clone().sub(p1),len=dir.length();var c=new THREE.Mesh(geo,mat);c.scale.set(1,len,1);c.position.copy(mid);c.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),dir.normalize());grp.add(c);}
+function drawDashedCyl(grp,p1,p2,geo,mat,ds,gs){var dir=p2.clone().sub(p1),len=dir.length(),u=dir.normalize(),t=0;while(t<len){var seg=Math.min(ds,len-t);var a=p1.clone().add(u.clone().multiplyScalar(t));var b=p1.clone().add(u.clone().multiplyScalar(t+seg));drawCyl(grp,a,b,geo,mat);t+=seg+gs;}}
+scE.forEach(function(e){drawCyl(G.signChange,cPos[e.i1],cPos[e.i2],cyG,cyM);});
+var hMt=new THREE.MeshPhongMaterial({color:0xca8a04,emissive:0x3a2800});
+function drawH(grp,h,sc){sc=sc||1;grp.add(new THREE.Mesh(new THREE.SphereGeometry(0.06*sc,8,8),hMt).translateX(h.pos.x).translateY(h.pos.y).translateZ(h.pos.z));var ad=h.normal.clone().normalize(),al=0.28*sc;var aCyl=new THREE.CylinderGeometry(0.015*sc,0.015*sc,1,6);var aMat=new THREE.MeshPhongMaterial({color:0xca8a04,emissive:0x3a2800});drawCyl(grp,h.pos.clone(),h.pos.clone().add(ad.clone().multiplyScalar(al)),aCyl,aMat);var cone=new THREE.Mesh(new THREE.ConeGeometry(0.035*sc,0.08*sc,6),new THREE.MeshPhongMaterial({color:0xca8a04,emissive:0x3a2800}));cone.position.copy(h.pos.clone().add(ad.clone().multiplyScalar(al)));cone.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),ad);grp.add(cone);}
+hP.forEach(function(h){drawH(G.hermite,h);});
+
+/* QEF */
+var cubeQEF={};function cK(x,y,z){return x+','+y+','+z;}
+function solveQEF(hd){var AtA=[[0,0,0],[0,0,0],[0,0,0]],Atb=[0,0,0];hd.forEach(function(h){var n=[h.normal.x,h.normal.y,h.normal.z],d=h.normal.dot(h.pos);for(var r=0;r<3;r++){for(var c=0;c<3;c++)AtA[r][c]+=n[r]*n[c];Atb[r]+=n[r]*d;}});var ct=new THREE.Vector3();hd.forEach(function(h){ct.add(h.pos);});ct.divideScalar(hd.length);var rg=0.01;for(var r=0;r<3;r++){AtA[r][r]+=rg;Atb[r]+=rg*[ct.x,ct.y,ct.z][r];}function d3(m){return m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])-m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])+m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);}var D=d3(AtA);if(Math.abs(D)<1e-10)return{pos:ct.clone(),centroid:ct.clone(),residual:0};function rc(m,b,col){return m.map(function(row,r){return row.map(function(v,c){return c===col?b[r]:v;});});}var pos=new THREE.Vector3(d3(rc(AtA,Atb,0))/D,d3(rc(AtA,Atb,1))/D,d3(rc(AtA,Atb,2))/D);var res=0;hd.forEach(function(h){var dd=h.normal.dot(new THREE.Vector3().subVectors(pos,h.pos));res+=dd*dd;});return{pos:pos,centroid:ct.clone(),residual:res};}
+var aCK=[];
+for(var iz=0;iz<NN-1;iz++)for(var iy=0;iy<NN-1;iy++)for(var ix=0;ix<NN-1;ix++){var corners=[idx(ix,iy,iz),idx(ix+1,iy,iz),idx(ix,iy+1,iz),idx(ix+1,iy+1,iz),idx(ix,iy,iz+1),idx(ix+1,iy,iz+1),idx(ix,iy+1,iz+1),idx(ix+1,iy+1,iz+1)];var cEP=[[0,1],[2,3],[4,5],[6,7],[0,2],[1,3],[4,6],[5,7],[0,4],[1,5],[2,6],[3,7]];var ch=[];cEP.forEach(function(ab){var ek=eK(corners[ab[0]],corners[ab[1]]);var hp=hP.find(function(h){return h.edgeKey===ek;});if(hp)ch.push(hp);});if(!ch.length)continue;var sol=solveQEF(ch);var mnP=cPos[corners[0]],mxP=cPos[corners[7]];sol.pos.clamp(mnP,mxP);cubeQEF[cK(ix,iy,iz)]={pos:sol.pos,centroid:sol.centroid,residual:sol.residual,hermite:ch,ix:ix,iy:iy,iz:iz,corners:corners};aCK.push(cK(ix,iy,iz));}
+var qMt=new THREE.MeshPhongMaterial({color:0x059669,emissive:0x013320});
+function mkStar(r){var s=new THREE.Shape();for(var i=0;i<10;i++){var rr=i%2===0?r:r*0.45,a=(i/10)*Math.PI*2-Math.PI/2;if(i===0)s.moveTo(Math.cos(a)*rr,Math.sin(a)*rr);else s.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);}s.closePath();var g=new THREE.ExtrudeGeometry(s,{depth:0.02,bevelEnabled:false});g.center();return g;}
+var stGe=mkStar(0.08);
+Object.keys(cubeQEF).forEach(function(k){var q=cubeQEF[k];G.qef.add(new THREE.Mesh(stGe,qMt).translateX(q.pos.x).translateY(q.pos.y).translateZ(q.pos.z));});
+
+/* Quads */
+var qdM=new THREE.MeshPhongMaterial({color:0xdb2777,emissive:0x4a0a28,side:THREE.DoubleSide,transparent:true,opacity:0.3,depthWrite:false});
+var qdW=new THREE.LineBasicMaterial({color:0xdb2777,opacity:0.8,transparent:true});
+function getCubes(i1,i2){var p1=cPos[i1],p2=cPos[i2],dir=p2.clone().sub(p1);var axis=Math.abs(dir.x)>0.5?0:Math.abs(dir.y)>0.5?1:2;var mn=new THREE.Vector3(Math.min(p1.x,p2.x),Math.min(p1.y,p2.y),Math.min(p1.z,p2.z));var gx=Math.round((mn.x-gMin)/S),gy=Math.round((mn.y-gMin)/S),gz=Math.round((mn.z-gMin)/S);
+/* Ring order CCW when looking from +axis direction:
+   axis X: (y,z) ring = (0,0),(0,-1),(-1,-1),(-1,0)
+   axis Y: (x,z) ring = (0,0),(-1,0),(-1,-1),(0,-1)
+   axis Z: (x,y) ring = (0,0),(0,-1),(-1,-1),(-1,0) */
+var ring;
+if(axis===0)ring=[[0,0],[0,-1],[-1,-1],[-1,0]];
+else if(axis===1)ring=[[0,0],[-1,0],[-1,-1],[0,-1]];
+else ring=[[0,0],[0,-1],[-1,-1],[-1,0]];
+/* Flip winding if i1 is outside (positive) so normals face outward consistently */
+if(cSgn[i1])ring=ring.slice().reverse();
+var out=[];ring.forEach(function(o){var cx,cy,cz;if(axis===0){cx=gx;cy=gy+o[0];cz=gz+o[1];}else if(axis===1){cx=gx+o[0];cy=gy;cz=gz+o[1];}else{cx=gx+o[0];cy=gy+o[1];cz=gz;}if(cx>=0&&cx<NN-1&&cy>=0&&cy<NN-1&&cz>=0&&cz<NN-1){var k=cK(cx,cy,cz);if(cubeQEF[k])out.push(cubeQEF[k]);}});return out;}
+function buildQuads(tg,mat,wm,src){scE.forEach(function(e){var cubes=getCubes(e.i1,e.i2);if(cubes.length<3)return;var verts=cubes.map(function(c){return src(c);});var geo=new THREE.BufferGeometry();var ps=verts.length===4?new Float32Array([].concat(verts[0].toArray(),verts[1].toArray(),verts[2].toArray(),verts[0].toArray(),verts[2].toArray(),verts[3].toArray())):new Float32Array([].concat(verts[0].toArray(),verts[1].toArray(),verts[2].toArray()));geo.setAttribute('position',new THREE.BufferAttribute(ps,3));geo.computeVertexNormals();tg.add(new THREE.Mesh(geo,mat));tg.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([].concat(verts,[verts[0]])),wm));});}
+buildQuads(G.quads,qdM,qdW,function(c){return c.pos.clone();});
+
+/* Per-cube vis */
+var pCV={tangentPlanes:[],errorLines:[],massPoint:[],cubeBounds:[],errorField:[]};
+aCK.forEach(function(key){var q=cubeQEF[key],sub={};
+['tangentPlanes','errorLines','massPoint','cubeBounds','errorField'].forEach(function(n){sub[n]=new THREE.Group();G[n].add(sub[n]);pCV[n].push(sub[n]);});
+var pSz=0.25,pMt=new THREE.MeshPhongMaterial({color:0x7c3aed,emissive:0x1a0a3a,side:THREE.DoubleSide,transparent:true,opacity:0.2,depthWrite:false});
+q.hermite.forEach(function(h){var pm=new THREE.Mesh(new THREE.PlaneGeometry(pSz,pSz),pMt);pm.position.copy(h.pos);pm.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),h.normal.clone().normalize());sub.tangentPlanes.add(pm);var brd=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-pSz/2,-pSz/2,0),new THREE.Vector3(pSz/2,-pSz/2,0),new THREE.Vector3(pSz/2,pSz/2,0),new THREE.Vector3(-pSz/2,pSz/2,0)]),new THREE.LineBasicMaterial({color:0x7c3aed,opacity:0.4,transparent:true}));brd.position.copy(h.pos);brd.quaternion.copy(pm.quaternion);sub.tangentPlanes.add(brd);});
+var errCylG=new THREE.CylinderGeometry(0.012,0.012,1,6),errCylM=new THREE.MeshPhongMaterial({color:0xf59e0b,emissive:0x3a2500,transparent:true,opacity:0.8});
+q.hermite.forEach(function(h){drawDashedCyl(sub.errorLines,h.pos.clone(),q.pos.clone(),errCylG,errCylM,0.08,0.04);});
+sub.massPoint.add(new THREE.Mesh(new THREE.SphereGeometry(0.045,8,8),new THREE.MeshPhongMaterial({color:0x8b5cf6,emissive:0x2a1a5a})).translateX(q.centroid.x).translateY(q.centroid.y).translateZ(q.centroid.z));
+var mpL=new THREE.Line(new THREE.BufferGeometry().setFromPoints([q.centroid.clone(),q.pos.clone()]),new THREE.LineDashedMaterial({color:0x8b5cf6,dashSize:0.04,gapSize:0.02,transparent:true,opacity:0.45}));mpL.computeLineDistances();sub.massPoint.add(mpL);
+var cn=cPos[idx(q.ix,q.iy,q.iz)].clone().add(cPos[idx(q.ix+1,q.iy+1,q.iz+1)]).multiplyScalar(0.5);
+sub.cubeBounds.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(S,S,S)),new THREE.LineBasicMaterial({color:0x059669,opacity:0.35,transparent:true})).translateX(cn.x).translateY(cn.y).translateZ(cn.z));
+var tt=Math.min(1,q.residual/0.3),hC=new THREE.Color().setHSL(0.33*(1-tt),0.8,0.5);
+sub.errorField.add(new THREE.Mesh(new THREE.BoxGeometry(S*0.97,S*0.97,S*0.97),new THREE.MeshPhongMaterial({color:hC,transparent:true,opacity:0.1,depthWrite:false,side:THREE.DoubleSide})).translateX(cn.x).translateY(cn.y).translateZ(cn.z));});
+
+/* Octree: 3x3x3 coarse */
+var coarseN=3,octants=[];
+for(var oz=0;oz<coarseN;oz++)for(var oy=0;oy<coarseN;oy++)for(var ox=0;ox<coarseN;ox++){
+var fK=[],allH=[];for(var dz=0;dz<2;dz++)for(var dy=0;dy<2;dy++)for(var dx=0;dx<2;dx++){var fk=cK(ox*2+dx,oy*2+dy,oz*2+dz);fK.push(fk);if(cubeQEF[fk])cubeQEF[fk].hermite.forEach(function(h){allH.push(h);});}
+var uniq=[],seen={};allH.forEach(function(h){var k=h.pos.toArray().map(function(v){return v.toFixed(4);}).join(',');if(!seen[k]){seen[k]=true;uniq.push(h);}});
+var cP2=new THREE.Vector3(),cR2=0;if(uniq.length>0){var sol2=solveQEF(uniq);var mnP2=cPos[idx(ox*2,oy*2,oz*2)],mxP2=cPos[idx(Math.min(ox*2+2,NN-1),Math.min(oy*2+2,NN-1),Math.min(oz*2+2,NN-1))];sol2.pos.clamp(mnP2,mxP2);cP2=sol2.pos;cR2=sol2.residual;}
+/* Safety: edge sign test from paper section 4.1 */
+var safe=true,cx0=gMin+ox*2,cy0=gMin+oy*2,cz0=gMin+oz*2,failEdges=[];
+[[[0,0,0],[2,0,0]],[[0,2,0],[2,2,0]],[[0,0,2],[2,0,2]],[[0,2,2],[2,2,2]],[[0,0,0],[0,2,0]],[[2,0,0],[2,2,0]],[[0,0,2],[0,2,2]],[[2,0,2],[2,2,2]],[[0,0,0],[0,0,2]],[[2,0,0],[2,0,2]],[[0,2,0],[0,2,2]],[[2,2,0],[2,2,2]]].forEach(function(eo){
+var a=eo[0],b=eo[1];
+var p0=new THREE.Vector3(cx0+a[0],cy0+a[1],cz0+a[2]);
+var pm=new THREE.Vector3(cx0+(a[0]+b[0])/2,cy0+(a[1]+b[1])/2,cz0+(a[2]+b[2])/2);
+var p1=new THREE.Vector3(cx0+b[0],cy0+b[1],cz0+b[2]);
+var s0=sdf(p0.x,p0.y,p0.z)>0;var sm=sdf(pm.x,pm.y,pm.z)>0;var s1=sdf(p1.x,p1.y,p1.z)>0;
+var coarseC=(s0!==s1)?1:0, fineC=((s0!==sm)?1:0)+((sm!==s1)?1:0);
+if(coarseC!==fineC){safe=false;failEdges.push({p0:p0,pm:pm,p1:p1,s0:s0,sm:sm,s1:s1});}});
+octants.push({ox:ox,oy:oy,oz:oz,fineKeys:fK,collapsedPos:cP2,collapsedRes:cR2,safe:safe,hermite:uniq,failEdges:failEdges});}
+document.getElementById('octantSlider').max=octants.length;
+
+/* Coarse grid vis */
+var ccG2=new THREE.CylinderGeometry(0.035,0.035,1,6),ccM2=new THREE.MeshPhongMaterial({color:0x6366f1,emissive:0x1a1a4a,transparent:true,opacity:0.7});
+for(var zz=gMin;zz<=gMax;zz+=2)for(var yy=gMin;yy<=gMax;yy+=2)for(var xx=gMin;xx<=gMax;xx+=2){var p=new THREE.Vector3(xx,yy,zz);[[2,0,0],[0,2,0],[0,0,2]].forEach(function(d){if(xx+d[0]<=gMax&&yy+d[1]<=gMax&&zz+d[2]<=gMax)drawCyl(G.coarseGrid,p,new THREE.Vector3(xx+d[0],yy+d[1],zz+d[2]),ccG2,ccM2);});}
+
+var oV={collapsedQEF:[],residualColor:[],safetyTest:[]};
+var cqMt=new THREE.MeshPhongMaterial({color:0x6366f1,emissive:0x1a1a4a});
+octants.forEach(function(oct){
+var sg1=new THREE.Group();if(oct.hermite.length>0){sg1.add(new THREE.Mesh(new THREE.SphereGeometry(0.11,10,10),cqMt).translateX(oct.collapsedPos.x).translateY(oct.collapsedPos.y).translateZ(oct.collapsedPos.z));var mcCyl=new THREE.CylinderGeometry(0.008,0.008,1,5);var mcMat=new THREE.MeshPhongMaterial({color:0x6366f1,emissive:0x1a1a4a,transparent:true,opacity:0.55});oct.fineKeys.forEach(function(fk){if(cubeQEF[fk]){drawCyl(sg1,cubeQEF[fk].pos.clone(),oct.collapsedPos.clone(),mcCyl,mcMat);}});}G.collapsedQEF.add(sg1);oV.collapsedQEF.push(sg1);
+var sg2=new THREE.Group();if(oct.hermite.length>0){var tt2=Math.min(1,oct.collapsedRes/0.5),col2=new THREE.Color().setHSL(0.33*(1-tt2),0.9,0.55);var cen2=new THREE.Vector3(gMin+oct.ox*2+1,gMin+oct.oy*2+1,gMin+oct.oz*2+1);sg2.add(new THREE.Mesh(new THREE.BoxGeometry(S*2*0.95,S*2*0.95,S*2*0.95),new THREE.MeshPhongMaterial({color:col2,transparent:true,opacity:0.09,depthWrite:false,side:THREE.DoubleSide})).translateX(cen2.x).translateY(cen2.y).translateZ(cen2.z));sg2.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(S*2,S*2,S*2)),new THREE.LineBasicMaterial({color:col2,opacity:0.3,transparent:true})).translateX(cen2.x).translateY(cen2.y).translateZ(cen2.z));}G.residualColor.add(sg2);oV.residualColor.push(sg2);
+var sg3=new THREE.Group();if(oct.hermite.length>0){var cen3=new THREE.Vector3(gMin+oct.ox*2+1,gMin+oct.oy*2+1,gMin+oct.oz*2+1);var sC=oct.safe?0x059669:0xdc2626;
+/* Octant wireframe - thin for safe, thick for unsafe */
+sg3.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(S*2,S*2,S*2)),new THREE.LineBasicMaterial({color:sC,opacity:oct.safe?0.5:0.6,transparent:true})).translateX(cen3.x).translateY(cen3.y).translateZ(cen3.z));
+/* For unsafe octants: draw the failing coarse edges with sign annotations */
+if(!oct.safe){
+  var failCyl=new THREE.CylinderGeometry(0.055,0.055,1,6);
+  var failMat=new THREE.MeshPhongMaterial({color:0xdc2626,emissive:0x4a0000,transparent:true,opacity:0.85});
+  var signGeO=new THREE.SphereGeometry(0.1,8,8);
+  var signMatOut=new THREE.MeshPhongMaterial({color:0x2563eb,emissive:0x0a1a4a}); /* outside + blue */
+  var signMatIn=new THREE.MeshPhongMaterial({color:0xea580c,emissive:0x4a1a00}); /* inside - orange */
+  oct.failEdges.forEach(function(fe){
+    /* thick red line for failing coarse edge */
+    drawCyl(sg3,fe.p0,fe.p1,failCyl,failMat);
+    /* sign dots at endpoints and midpoint */
+    sg3.add(new THREE.Mesh(signGeO,fe.s0?signMatOut:signMatIn).translateX(fe.p0.x).translateY(fe.p0.y).translateZ(fe.p0.z));
+    sg3.add(new THREE.Mesh(signGeO,fe.sm?signMatOut:signMatIn).translateX(fe.pm.x).translateY(fe.pm.y).translateZ(fe.pm.z));
+    sg3.add(new THREE.Mesh(signGeO,fe.s1?signMatOut:signMatIn).translateX(fe.p1.x).translateY(fe.p1.y).translateZ(fe.p1.z));
+  });
+} else {
+  /* For safe octants: subtle green fill */
+  sg3.add(new THREE.Mesh(new THREE.BoxGeometry(S*2*0.92,S*2*0.92,S*2*0.92),new THREE.MeshPhongMaterial({color:sC,transparent:true,opacity:0.1,depthWrite:false,side:THREE.DoubleSide})).translateX(cen3.x).translateY(cen3.y).translateZ(cen3.z));
+}
+/* Label */
+var cv3=document.createElement('canvas');cv3.width=480;cv3.height=200;var cx4=cv3.getContext('2d');
+cx4.fillStyle='rgba(0,0,0,0.7)';cx4.beginPath();cx4.roundRect(10,5,460,190,16);cx4.fill();
+cx4.fillStyle=oct.safe?'#34d399':'#f87171';cx4.font='bold 54px monospace';cx4.textAlign='center';
+cx4.fillText(oct.safe?'SAFE':'UNSAFE',240,70);
+cx4.font='22px monospace';cx4.fillStyle='#ddd';
+if(oct.safe){cx4.fillText('coarse = fine crossings',240,110);}
+else{var fe0=oct.failEdges[0];var fc0=((fe0.s0!==fe0.s1)?1:0),ff0=((fe0.s0!==fe0.sm)?1:0)+((fe0.sm!==fe0.s1)?1:0);cx4.fillText('coarse: '+fc0+' crossings',240,108);cx4.fillText('fine: '+ff0+' crossings',240,140);}
+var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv3),transparent:true,opacity:0.95}));sp.position.copy(cen3).add(new THREE.Vector3(0,1.5,0));sp.scale.set(1.8,0.75,1);sg3.add(sp);
+}G.safetyTest.add(sg3);oV.safetyTest.push(sg3);});
+
+var cqdM2=new THREE.MeshPhongMaterial({color:0x6366f1,emissive:0x1a1a3a,side:THREE.DoubleSide,transparent:true,opacity:0.4,depthWrite:false}),cqdW2=new THREE.LineBasicMaterial({color:0x6366f1,opacity:0.85,transparent:true});
+/* Adaptive mesh per paper: safe octants → collapsed vertex, unsafe → keep fine vertices.
+   For each fine sign-change edge, get the vertex for each adjacent cube:
+   if the cube's octant is safe, use the collapsed position; otherwise use fine QEF.
+   Then deduplicate (safe cubes in same octant share a vertex) and emit quad/tri. */
+(function(){
+  function getVertex(cube){
+    var oi=Math.floor(cube.iz/2)*coarseN*coarseN+Math.floor(cube.iy/2)*coarseN+Math.floor(cube.ix/2);
+    var oct=octants[oi];
+    if(oct.safe) return {pos:oct.collapsedPos.clone(),id:'o'+oi};
+    else return {pos:cube.pos.clone(),id:'c'+cube.ix+','+cube.iy+','+cube.iz};
+  }
+  scE.forEach(function(e){
+    var cubes=getCubes(e.i1,e.i2);if(cubes.length<3)return;
+    var raw=cubes.map(function(c){return getVertex(c);});
+    /* deduplicate by id, preserving ring order from getCubes */
+    var uniq=[],seen={};raw.forEach(function(v){if(!seen[v.id]){seen[v.id]=true;uniq.push(v);}});
+    if(uniq.length<3)return;
+    var verts=uniq.map(function(v){return v.pos;});
+    var geo=new THREE.BufferGeometry();
+    var ps=verts.length===4?new Float32Array([].concat(verts[0].toArray(),verts[1].toArray(),verts[2].toArray(),verts[0].toArray(),verts[2].toArray(),verts[3].toArray())):new Float32Array([].concat(verts[0].toArray(),verts[1].toArray(),verts[2].toArray()));
+    geo.setAttribute('position',new THREE.BufferAttribute(ps,3));geo.computeVertexNormals();
+    G.collapsedQuads.add(new THREE.Mesh(geo,cqdM2));
+    G.collapsedQuads.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([].concat(verts,[verts[0]])),cqdW2));
+  });
+})();
+
+/* Forced collapse: ALL octants collapsed regardless of safety — topology breaks */
+var fcM=new THREE.MeshPhongMaterial({color:0xdc2626,emissive:0x3a0a0a,side:THREE.DoubleSide,transparent:true,opacity:0.5,depthWrite:false});
+var fcW=new THREE.LineBasicMaterial({color:0xdc2626,opacity:0.9,transparent:true});
+(function(){
+  function getForcedVertex(cube){
+    var oi=Math.floor(cube.iz/2)*coarseN*coarseN+Math.floor(cube.iy/2)*coarseN+Math.floor(cube.ix/2);
+    return {pos:octants[oi].collapsedPos.clone(),id:'o'+oi};
+  }
+  scE.forEach(function(e){
+    var cubes=getCubes(e.i1,e.i2);if(cubes.length<3)return;
+    var raw=cubes.map(function(c){return getForcedVertex(c);});
+    var uniq=[],seen={};raw.forEach(function(v){if(!seen[v.id]){seen[v.id]=true;uniq.push(v);}});
+    if(uniq.length<3)return;
+    var verts=uniq.map(function(v){return v.pos;});
+    var geo=new THREE.BufferGeometry();
+    var ps=verts.length===4?new Float32Array([].concat(verts[0].toArray(),verts[1].toArray(),verts[2].toArray(),verts[0].toArray(),verts[2].toArray(),verts[3].toArray())):new Float32Array([].concat(verts[0].toArray(),verts[1].toArray(),verts[2].toArray()));
+    geo.setAttribute('position',new THREE.BufferAttribute(ps,3));geo.computeVertexNormals();
+    G.forcedCollapse.add(new THREE.Mesh(geo,fcM));
+    G.forcedCollapse.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([].concat(verts,[verts[0]])),fcW));
+  });
+})();
+
+/* Isosurface (surface net) */
+(function(){var res=28,mn=-3.3,mx=3.3,step=(mx-mn)/res;
+/* Compute SDF at grid corners */
+var nn=res+1,sgn=[];
+for(var iz=0;iz<nn;iz++)for(var iy=0;iy<nn;iy++)for(var ix=0;ix<nn;ix++)sgn.push(sdf(mn+ix*step,mn+iy*step,mn+iz*step));
+function ci(x,y,z){return z*nn*nn+y*nn+x;}
+/* Surface net: one vertex per active cell */
+var lv={};
+for(var iz=0;iz<res;iz++)for(var iy=0;iy<res;iy++)for(var ix=0;ix<res;ix++){
+  var cv=[];for(var dz=0;dz<=1;dz++)for(var dy=0;dy<=1;dy++)for(var dx=0;dx<=1;dx++)cv.push(sgn[ci(ix+dx,iy+dy,iz+dz)]);
+  var hp2=false,hn2=false;cv.forEach(function(v){if(v>0)hp2=true;else hn2=true;});if(!hp2||!hn2)continue;
+  var edges2=[[0,1],[2,3],[4,5],[6,7],[0,2],[1,3],[4,6],[5,7],[0,4],[1,5],[2,6],[3,7]];
+  var avg=new THREE.Vector3(),cnt2=0;
+  edges2.forEach(function(e){
+    var dx0=e[0]&1,dy0=(e[0]>>1)&1,dz0=(e[0]>>2)&1;
+    var dx1=e[1]&1,dy1=(e[1]>>1)&1,dz1=(e[1]>>2)&1;
+    if((cv[e[0]]>0)!==(cv[e[1]]>0)){
+      var t=cv[e[0]]/(cv[e[0]]-cv[e[1]]);
+      avg.x+=mn+(ix+dx0+(dx1-dx0)*t)*step;
+      avg.y+=mn+(iy+dy0+(dy1-dy0)*t)*step;
+      avg.z+=mn+(iz+dz0+(dz1-dz0)*t)*step;cnt2++;}});
+  if(cnt2>0){avg.divideScalar(cnt2);lv[ix+','+iy+','+iz]=avg;}}
+/* Build quads: for each sign-change edge between adjacent corners, 
+   find the 4 cells sharing that edge and connect their vertices.
+   Edge along +x at corner (ix,iy,iz): 4 cells at y∈{iy-1,iy}, z∈{iz-1,iz}
+   Edge along +y at corner (ix,iy,iz): 4 cells at x∈{ix-1,ix}, z∈{iz-1,iz}
+   Edge along +z at corner (ix,iy,iz): 4 cells at x∈{ix-1,ix}, y∈{iy-1,iy} */
+var triPos=[];
+for(var iz=0;iz<nn;iz++)for(var iy=0;iy<nn;iy++)for(var ix=0;ix<nn;ix++){
+  /* edge along +x */
+  if(ix<res&&(sgn[ci(ix,iy,iz)]>0)!==(sgn[ci(ix+1,iy,iz)]>0)){
+    var c=[];
+    [[iy-1,iz-1],[iy,iz-1],[iy,iz],[iy-1,iz]].forEach(function(o){
+      var k2=ix+','+o[0]+','+o[1];if(o[0]>=0&&o[0]<res&&o[1]>=0&&o[1]<res&&lv[k2])c.push(lv[k2]);});
+    if(c.length===4){triPos.push(c[0].x,c[0].y,c[0].z,c[1].x,c[1].y,c[1].z,c[2].x,c[2].y,c[2].z,c[0].x,c[0].y,c[0].z,c[2].x,c[2].y,c[2].z,c[3].x,c[3].y,c[3].z);}
+    else if(c.length===3){triPos.push(c[0].x,c[0].y,c[0].z,c[1].x,c[1].y,c[1].z,c[2].x,c[2].y,c[2].z);}
+  }
+  /* edge along +y */
+  if(iy<res&&(sgn[ci(ix,iy,iz)]>0)!==(sgn[ci(ix,iy+1,iz)]>0)){
+    var c=[];
+    [[ix-1,iz-1],[ix,iz-1],[ix,iz],[ix-1,iz]].forEach(function(o){
+      var k2=o[0]+','+iy+','+o[1];if(o[0]>=0&&o[0]<res&&o[1]>=0&&o[1]<res&&lv[k2])c.push(lv[k2]);});
+    if(c.length===4){triPos.push(c[0].x,c[0].y,c[0].z,c[1].x,c[1].y,c[1].z,c[2].x,c[2].y,c[2].z,c[0].x,c[0].y,c[0].z,c[2].x,c[2].y,c[2].z,c[3].x,c[3].y,c[3].z);}
+    else if(c.length===3){triPos.push(c[0].x,c[0].y,c[0].z,c[1].x,c[1].y,c[1].z,c[2].x,c[2].y,c[2].z);}
+  }
+  /* edge along +z */
+  if(iz<res&&(sgn[ci(ix,iy,iz)]>0)!==(sgn[ci(ix,iy,iz+1)]>0)){
+    var c=[];
+    [[ix-1,iy-1],[ix,iy-1],[ix,iy],[ix-1,iy]].forEach(function(o){
+      var k2=o[0]+','+o[1]+','+iz;if(o[0]>=0&&o[0]<res&&o[1]>=0&&o[1]<res&&lv[k2])c.push(lv[k2]);});
+    if(c.length===4){triPos.push(c[0].x,c[0].y,c[0].z,c[1].x,c[1].y,c[1].z,c[2].x,c[2].y,c[2].z,c[0].x,c[0].y,c[0].z,c[2].x,c[2].y,c[2].z,c[3].x,c[3].y,c[3].z);}
+    else if(c.length===3){triPos.push(c[0].x,c[0].y,c[0].z,c[1].x,c[1].y,c[1].z,c[2].x,c[2].y,c[2].z);}
+  }
+}
+if(triPos.length>0){var geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(triPos),3));geo.computeVertexNormals();
+G.sphere.add(new THREE.Mesh(geo,new THREE.MeshPhongMaterial({color:0x0d9488,emissive:0x022020,transparent:true,opacity:0.12,side:THREE.DoubleSide,depthWrite:false})));
+G.sphere.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo,15),new THREE.LineBasicMaterial({color:0x0d9488,transparent:true,opacity:0.3})));}})();
+
+/* Detail view */
+function clearG(g){while(g.children.length>0)g.remove(g.children[0]);}
+function rebuildDetail(ci){
+Object.keys(DG).forEach(function(k){clearG(DG[k]);});
+if(ci<0){document.getElementById('di').style.display='none';document.getElementById('dl').innerHTML='Isolated Cube <span>&mdash; select with slider</span>';Object.keys(tM).forEach(function(id){var el=document.getElementById(id);if(el&&DG[tM[id]])DG[tM[id]].visible=el.checked;});return;}
+var q=cubeQEF[aCK[ci]];
+var center=cPos[idx(q.ix,q.iy,q.iz)].clone().add(cPos[idx(q.ix+1,q.iy+1,q.iz+1)]).multiplyScalar(0.5);
+function off(p){return p.clone().sub(center);}
+DG.grid.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(S,S,S)),new THREE.LineBasicMaterial({color:0x000000,opacity:0.18,transparent:true})));
+/* local isosurface: marching cubes in cube neighborhood using sdf() */
+(function(){
+  var clip=S/2+1.4,res=24,step=clip*2/res;
+  var triPos2=[];
+  /* sample SDF on a local grid */
+  var nn=res+1,vals=[];
+  for(var iz=0;iz<nn;iz++)for(var iy=0;iy<nn;iy++)for(var ix=0;ix<nn;ix++){
+    var px=center.x-clip+ix*step,py=center.y-clip+iy*step,pz=center.z-clip+iz*step;
+    vals.push(sdf(px,py,pz));
+  }
+  function vi(x,y,z){return z*nn*nn+y*nn+x;}
+  /* surface net: average edge crossings per active cell */
+  for(var iz=0;iz<res;iz++)for(var iy=0;iy<res;iy++)for(var ix=0;ix<res;ix++){
+    var cv2=[];for(var dz2=0;dz2<=1;dz2++)for(var dy2=0;dy2<=1;dy2++)for(var dx2=0;dx2<=1;dx2++)cv2.push(vals[vi(ix+dx2,iy+dy2,iz+dz2)]);
+    var hp3=false,hn3=false;cv2.forEach(function(v){if(v>0)hp3=true;else hn3=true;});if(!hp3||!hn3)continue;
+    /* emit triangles from edge crossings using simple surface net approach */
+    var edges3=[[0,1,1,0,0],[2,3,1,0,0],[4,5,1,0,0],[6,7,1,0,0],[0,2,0,1,0],[1,3,0,1,0],[4,6,0,1,0],[5,7,0,1,0],[0,4,0,0,1],[1,5,0,0,1],[2,6,0,0,1],[3,7,0,0,1]];
+    var avg2=new THREE.Vector3(),cnt3=0;
+    edges3.forEach(function(ed){
+      var v0=cv2[ed[0]],v1=cv2[ed[1]];
+      if((v0>0)===(v1>0))return;
+      var t2=v0/(v0-v1);
+      var c0x=ix+(ed[0]&1),c0y=iy+((ed[0]>>1)&1),c0z=iy+((ed[0]>>2)&1);
+      /* use actual corner positions */
+      var offsets=[[0,0,0],[1,0,0],[0,1,0],[1,1,0],[0,0,1],[1,0,1],[0,1,1],[1,1,1]];
+      var o0=offsets[ed[0]],o1=offsets[ed[1]];
+      var px0=-clip+(ix+o0[0])*step,py0=-clip+(iy+o0[1])*step,pz0=-clip+(iz+o0[2])*step;
+      var px1=-clip+(ix+o1[0])*step,py1=-clip+(iy+o1[1])*step,pz1=-clip+(iz+o1[2])*step;
+      avg2.x+=px0+(px1-px0)*t2;avg2.y+=py0+(py1-py0)*t2;avg2.z+=pz0+(pz1-pz0)*t2;cnt3++;
+    });
+    if(cnt3===0)continue;
+    avg2.divideScalar(cnt3);
+    /* store vertex for this cell */
+    if(!this['_sn'])this['_sn']={};
+    this['_sn'][ix+','+iy+','+iz]=avg2.clone();
+  }
+  /* emit quads between adjacent cells sharing a sign-change edge */
+  var sn=this['_sn']||{};
+  for(var iz=0;iz<res;iz++)for(var iy=0;iy<res;iy++)for(var ix=0;ix<res;ix++){
+    var v00=vals[vi(ix,iy,iz)],v10=vals[vi(ix+1,iy,iz)];
+    var v01=vals[vi(ix,iy+1,iz)],v11=vals[vi(ix+1,iy+1,iz)];
+    var vz0=vals[vi(ix,iy,iz+1)],vz1=vals[vi(ix+1,iy,iz+1)];
+    var vy0=vals[vi(ix,iy,iz)],vy1=vals[vi(ix,iy+1,iz)];
+    /* x-edges: connect 4 cells around an x-edge */
+    if(iy>0&&iz>0&&(v00>0)!==(v10>0)){
+      var q0=sn[ix+','+(iy-1)+','+(iz-1)],q1=sn[ix+','+iy+','+(iz-1)],q2=sn[ix+','+iy+','+iz],q3=sn[ix+','+(iy-1)+','+iz];
+      if(q0&&q1&&q2&&q3){triPos2.push(q0.x,q0.y,q0.z,q1.x,q1.y,q1.z,q2.x,q2.y,q2.z);triPos2.push(q0.x,q0.y,q0.z,q2.x,q2.y,q2.z,q3.x,q3.y,q3.z);}
+    }
+    /* y-edges */
+    if(ix>0&&iz>0&&(v00>0)!==(v01>0)){
+      var q0=sn[(ix-1)+','+iy+','+(iz-1)],q1=sn[ix+','+iy+','+(iz-1)],q2=sn[ix+','+iy+','+iz],q3=sn[(ix-1)+','+iy+','+iz];
+      if(q0&&q1&&q2&&q3){triPos2.push(q0.x,q0.y,q0.z,q1.x,q1.y,q1.z,q2.x,q2.y,q2.z);triPos2.push(q0.x,q0.y,q0.z,q2.x,q2.y,q2.z,q3.x,q3.y,q3.z);}
+    }
+    /* z-edges */
+    if(ix>0&&iy>0&&(v00>0)!==(vz0>0)){
+      var q0=sn[(ix-1)+','+(iy-1)+','+iz],q1=sn[ix+','+(iy-1)+','+iz],q2=sn[ix+','+iy+','+iz],q3=sn[(ix-1)+','+iy+','+iz];
+      if(q0&&q1&&q2&&q3){triPos2.push(q0.x,q0.y,q0.z,q1.x,q1.y,q1.z,q2.x,q2.y,q2.z);triPos2.push(q0.x,q0.y,q0.z,q2.x,q2.y,q2.z,q3.x,q3.y,q3.z);}
+    }
+  }
+  if(triPos2.length>0){var geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(triPos2),3));geo.computeVertexNormals();
+  DG.sphere.add(new THREE.Mesh(geo,new THREE.MeshPhongMaterial({color:0x0d9488,emissive:0x022020,transparent:true,opacity:0.15,side:THREE.DoubleSide,depthWrite:false})));
+  DG.sphere.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo,20),new THREE.LineBasicMaterial({color:0x0d9488,transparent:true,opacity:0.3})));}
+})();
+q.corners.forEach(function(ci2){var p=off(cPos[ci2]);
+  var cv=document.createElement('canvas');cv.width=64;cv.height=64;var cx=cv.getContext('2d');
+  cx.beginPath();cx.arc(32,32,28,0,Math.PI*2);cx.fillStyle=cSgn[ci2]?'#2563eb':'#ea580c';cx.fill();
+  cx.fillStyle='#fff';cx.font='bold 44px monospace';cx.textAlign='center';cx.textBaseline='middle';
+  cx.fillText(cSgn[ci2]?'+':'\u2212',32,34);
+  var mat=new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),transparent:true,depthTest:false});
+  var sp=new THREE.Sprite(mat);sp.position.set(p.x,p.y,p.z);sp.scale.set(0.22,0.22,1);
+  DG.corners.add(sp);
+});
+var cEP2=[[0,1],[2,3],[4,5],[6,7],[0,2],[1,3],[4,6],[5,7],[0,4],[1,5],[2,6],[3,7]];var cyGd=new THREE.CylinderGeometry(0.028,0.028,1,6);
+cEP2.forEach(function(ab){if(!hP.find(function(h){return h.edgeKey===eK(q.corners[ab[0]],q.corners[ab[1]]);}))return;drawCyl(DG.signChange,off(cPos[q.corners[ab[0]]]),off(cPos[q.corners[ab[1]]]),cyGd,cyM);});
+q.hermite.forEach(function(h){drawH(DG.hermite,{pos:off(h.pos),normal:h.normal},1.2);});
+DG.qef.add(new THREE.Mesh(mkStar(0.08),qMt).translateX(off(q.pos).x).translateY(off(q.pos).y).translateZ(off(q.pos).z));
+var pSz2=0.4,pMt2=new THREE.MeshPhongMaterial({color:0x7c3aed,emissive:0x1a0a3a,side:THREE.DoubleSide,transparent:true,opacity:0.2,depthWrite:false});
+q.hermite.forEach(function(h){var op=off(h.pos);var pm=new THREE.Mesh(new THREE.PlaneGeometry(pSz2,pSz2),pMt2);pm.position.copy(op);pm.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),h.normal.clone().normalize());DG.tangentPlanes.add(pm);var brd=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-pSz2/2,-pSz2/2,0),new THREE.Vector3(pSz2/2,-pSz2/2,0),new THREE.Vector3(pSz2/2,pSz2/2,0),new THREE.Vector3(-pSz2/2,pSz2/2,0)]),new THREE.LineBasicMaterial({color:0x7c3aed,opacity:0.4,transparent:true}));brd.position.copy(op);brd.quaternion.copy(pm.quaternion);DG.tangentPlanes.add(brd);});
+var dErrCylG=new THREE.CylinderGeometry(0.018,0.018,1,6),dErrCylM=new THREE.MeshPhongMaterial({color:0xf59e0b,emissive:0x3a2500,transparent:true,opacity:0.85});
+q.hermite.forEach(function(h){drawDashedCyl(DG.errorLines,off(h.pos),off(q.pos),dErrCylG,dErrCylM,0.08,0.04);});
+DG.massPoint.add(new THREE.Mesh(new THREE.SphereGeometry(0.06,10,10),new THREE.MeshPhongMaterial({color:0x8b5cf6,emissive:0x2a1a5a})).translateX(off(q.centroid).x).translateY(off(q.centroid).y).translateZ(off(q.centroid).z));
+var mpL2=new THREE.Line(new THREE.BufferGeometry().setFromPoints([off(q.centroid),off(q.pos)]),new THREE.LineDashedMaterial({color:0x8b5cf6,dashSize:0.04,gapSize:0.02,transparent:true,opacity:0.5}));mpL2.computeLineDistances();DG.massPoint.add(mpL2);
+DG.cubeBounds.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(S,S,S)),new THREE.LineBasicMaterial({color:0x059669,opacity:0.4,transparent:true})));
+var tt3=Math.min(1,q.residual/0.3),hC3=new THREE.Color().setHSL(0.33*(1-tt3),0.8,0.5);
+DG.errorField.add(new THREE.Mesh(new THREE.BoxGeometry(S*0.97,S*0.97,S*0.97),new THREE.MeshPhongMaterial({color:hC3,transparent:true,opacity:0.12,depthWrite:false,side:THREE.DoubleSide})));
+/* quads touching this cube */
+/* Detail quads: each quad colored by its generating sign-change edge */
+/* First, collect all neighbor cubes and show them as ghost context */
+var neighborSet={};
+scE.forEach(function(e){var cubes=getCubes(e.i1,e.i2);if(cubes.length<3)return;if(!cubes.some(function(c){return c.ix===q.ix&&c.iy===q.iy&&c.iz===q.iz;}))return;
+cubes.forEach(function(c){var nk=c.ix+','+c.iy+','+c.iz;if(nk!==aCK[ci])neighborSet[nk]=c;});});
+/* Draw ghost neighbor cube wireframes and QEF stars */
+Object.keys(neighborSet).forEach(function(nk){var nc=neighborSet[nk];
+  var ncen=cPos[idx(nc.ix,nc.iy,nc.iz)].clone().add(cPos[idx(nc.ix+1,nc.iy+1,nc.iz+1)]).multiplyScalar(0.5);
+  DG.quads.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(S,S,S)),new THREE.LineBasicMaterial({color:0x999999,opacity:0.15,transparent:true})).translateX(off(ncen).x).translateY(off(ncen).y).translateZ(off(ncen).z));
+  DG.quads.add(new THREE.Mesh(mkStar(0.06),new THREE.MeshPhongMaterial({color:0x059669,emissive:0x013320,transparent:true,opacity:0.5})).translateX(off(nc.pos).x).translateY(off(nc.pos).y).translateZ(off(nc.pos).z));
+});
+/* Quad patterns: all pink #db2777 but with different fill patterns */
+var quadPatterns=[];
+(function(){
+  var pats=['dstripe','dots','crosshatch','hstripe','vstripe','grid'];
+  var pink=[0xdb,0x27,0x77];
+  pats.forEach(function(pat){
+    var cv=document.createElement('canvas');cv.width=48;cv.height=48;
+    var cx=cv.getContext('2d');
+    cx.fillStyle='rgba('+pink[0]+','+pink[1]+','+pink[2]+',0.4)';
+    cx.fillRect(0,0,48,48);
+    cx.fillStyle='rgba(255,255,255,0.55)';
+    if(pat==='dstripe'){
+      /* Bold diagonal stripes */
+      for(var s=-48;s<96;s+=14){cx.beginPath();cx.moveTo(s,0);cx.lineTo(s+48,48);cx.lineTo(s+42,48);cx.lineTo(s-6,0);cx.fill();}
+    }else if(pat==='dots'){
+      /* Large polka dots */
+      [[12,12],[36,12],[24,28],[0,28],[48,28],[12,44],[36,44]].forEach(function(p){cx.beginPath();cx.arc(p[0],p[1],5.5,0,Math.PI*2);cx.fill();});
+    }else if(pat==='crosshatch'){
+      /* Dense crosshatch */
+      for(var s=-48;s<96;s+=12){cx.beginPath();cx.moveTo(s,0);cx.lineTo(s+48,48);cx.lineTo(s+44,48);cx.lineTo(s-4,0);cx.fill();}
+      for(var s=-48;s<96;s+=12){cx.beginPath();cx.moveTo(s,48);cx.lineTo(s+48,0);cx.lineTo(s+44,0);cx.lineTo(s-4,48);cx.fill();}
+    }else if(pat==='hstripe'){
+      for(var y=0;y<48;y+=12){cx.fillRect(0,y,48,6);}
+    }else if(pat==='vstripe'){
+      for(var x=0;x<48;x+=12){cx.fillRect(x,0,6,48);}
+    }else if(pat==='grid'){
+      for(var y=0;y<48;y+=14){cx.fillRect(0,y,48,4);}
+      for(var x=0;x<48;x+=14){cx.fillRect(x,0,4,48);}
+    }
+    var tex=new THREE.CanvasTexture(cv);tex.wrapS=THREE.RepeatWrapping;tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(3,3);
+    quadPatterns.push(tex);
+  });
+})();
+var dqi=0;
+scE.forEach(function(e){var cubes=getCubes(e.i1,e.i2);if(cubes.length<3)return;if(!cubes.some(function(c){return c.ix===q.ix&&c.iy===q.iy&&c.iz===q.iz;}))return;
+var pi=dqi%quadPatterns.length;dqi++;
+var verts=cubes.map(function(c){return off(c.pos);});var geo=new THREE.BufferGeometry();var ps=verts.length===4?new Float32Array([].concat(verts[0].toArray(),verts[1].toArray(),verts[2].toArray(),verts[0].toArray(),verts[2].toArray(),verts[3].toArray())):new Float32Array([].concat(verts[0].toArray(),verts[1].toArray(),verts[2].toArray()));
+/* UV coords for pattern */
+var uvs=verts.length===4?new Float32Array([0,0,1,0,1,1,0,0,1,1,0,1]):new Float32Array([0,0,1,0,0.5,1]);
+geo.setAttribute('position',new THREE.BufferAttribute(ps,3));geo.setAttribute('uv',new THREE.BufferAttribute(uvs,2));geo.computeVertexNormals();
+DG.quads.add(new THREE.Mesh(geo,new THREE.MeshPhongMaterial({color:0xffffff,map:quadPatterns[pi],emissive:0x4a0a28,side:THREE.DoubleSide,transparent:true,depthWrite:false})));
+DG.quads.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([].concat(verts,[verts[0]])),new THREE.LineBasicMaterial({color:0xdb2777,opacity:0.9,transparent:true})));
+/* Draw the generating sign-change edge in pink */
+var eCyl=new THREE.CylinderGeometry(0.025,0.025,1,6);
+drawCyl(DG.quads,off(cPos[e.i1]),off(cPos[e.i2]),eCyl,new THREE.MeshPhongMaterial({color:0xdb2777,emissive:0x4a0a28,transparent:true,opacity:0.85}));
+/* Dot at hermite point on this edge */
+var hp2=hP.find(function(h){return h.edgeKey===e.key;});
+if(hp2)DG.quads.add(new THREE.Mesh(new THREE.SphereGeometry(0.05,8,8),new THREE.MeshPhongMaterial({color:0xdb2777,emissive:0x4a0a28})).translateX(off(hp2.pos).x).translateY(off(hp2.pos).y).translateZ(off(hp2.pos).z));});
+/* octree layers for this cube's octant */
+var oix=Math.floor(q.ix/2),oiy=Math.floor(q.iy/2),oiz=Math.floor(q.iz/2);
+var oct=octants[oiz*coarseN*coarseN+oiy*coarseN+oix];
+if(oct&&oct.hermite.length>0){
+DG.collapsedQEF.add(new THREE.Mesh(new THREE.SphereGeometry(0.14,10,10),cqMt).translateX(off(oct.collapsedPos).x).translateY(off(oct.collapsedPos).y).translateZ(off(oct.collapsedPos).z));
+var dcCyl=new THREE.CylinderGeometry(0.012,0.012,1,5);
+var dcMat=new THREE.MeshPhongMaterial({color:0x6366f1,emissive:0x1a1a4a,transparent:true,opacity:0.7});
+var dcMatSib=new THREE.MeshPhongMaterial({color:0x6366f1,emissive:0x1a1a4a,transparent:true,opacity:0.5});
+drawCyl(DG.collapsedQEF,off(q.pos),off(oct.collapsedPos),dcCyl,dcMat);
+oct.fineKeys.forEach(function(fk){if(cubeQEF[fk]&&fk!==aCK[ci]){DG.collapsedQEF.add(new THREE.Mesh(mkStar(0.07),new THREE.MeshPhongMaterial({color:0x059669,emissive:0x013320,transparent:true,opacity:0.6})).translateX(off(cubeQEF[fk].pos).x).translateY(off(cubeQEF[fk].pos).y).translateZ(off(cubeQEF[fk].pos).z));drawCyl(DG.collapsedQEF,off(cubeQEF[fk].pos),off(oct.collapsedPos),dcCyl,dcMatSib);}});
+var octCenter=new THREE.Vector3(gMin+oix*2+1,gMin+oiy*2+1,gMin+oiz*2+1);
+DG.coarseGrid.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(S*2,S*2,S*2)),new THREE.LineBasicMaterial({color:0x6366f1,opacity:0.7,transparent:true,linewidth:2})).translateX(off(octCenter).x).translateY(off(octCenter).y).translateZ(off(octCenter).z));
+var tt4=Math.min(1,oct.collapsedRes/0.5),col4=new THREE.Color().setHSL(0.33*(1-tt4),0.9,0.55);
+DG.residualColor.add(new THREE.Mesh(new THREE.BoxGeometry(S*2*0.95,S*2*0.95,S*2*0.95),new THREE.MeshPhongMaterial({color:col4,transparent:true,opacity:0.08,depthWrite:false,side:THREE.DoubleSide})).translateX(off(octCenter).x).translateY(off(octCenter).y).translateZ(off(octCenter).z));
+var sCol2=oct.safe?0x059669:0xdc2626;
+DG.safetyTest.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(S*2,S*2,S*2)),new THREE.LineBasicMaterial({color:sCol2,opacity:oct.safe?0.4:0.6,transparent:true})).translateX(off(octCenter).x).translateY(off(octCenter).y).translateZ(off(octCenter).z));
+if(!oct.safe){
+  var fCyl2=new THREE.CylinderGeometry(0.06,0.06,1,6);
+  var fMat2=new THREE.MeshPhongMaterial({color:0xdc2626,emissive:0x4a0000,transparent:true,opacity:0.85});
+  var sGe2=new THREE.SphereGeometry(0.11,8,8);
+  oct.failEdges.forEach(function(fe){
+    drawCyl(DG.safetyTest,off(fe.p0),off(fe.p1),fCyl2,fMat2);
+    DG.safetyTest.add(new THREE.Mesh(sGe2,fe.s0?mO:mI).translateX(off(fe.p0).x).translateY(off(fe.p0).y).translateZ(off(fe.p0).z));
+    DG.safetyTest.add(new THREE.Mesh(sGe2,fe.sm?mO:mI).translateX(off(fe.pm).x).translateY(off(fe.pm).y).translateZ(off(fe.pm).z));
+    DG.safetyTest.add(new THREE.Mesh(sGe2,fe.s1?mO:mI).translateX(off(fe.p1).x).translateY(off(fe.p1).y).translateZ(off(fe.p1).z));
+  });
+} else {
+  DG.safetyTest.add(new THREE.Mesh(new THREE.BoxGeometry(S*2*0.92,S*2*0.92,S*2*0.92),new THREE.MeshPhongMaterial({color:sCol2,transparent:true,opacity:0.04,depthWrite:false,side:THREE.DoubleSide})).translateX(off(octCenter).x).translateY(off(octCenter).y).translateZ(off(octCenter).z));
+}
+var cv4=document.createElement('canvas');cv4.width=480;cv4.height=200;var cx5=cv4.getContext('2d');
+cx5.fillStyle='rgba(0,0,0,0.7)';cx5.beginPath();cx5.roundRect(10,5,460,190,16);cx5.fill();
+cx5.fillStyle=oct.safe?'#34d399':'#f87171';cx5.font='bold 54px monospace';cx5.textAlign='center';
+cx5.fillText(oct.safe?'SAFE':'UNSAFE',240,70);cx5.font='22px monospace';cx5.fillStyle='#ddd';
+if(oct.safe){cx5.fillText('coarse = fine crossings',240,110);}else{var fe2=oct.failEdges[0];var fc2=((fe2.s0!==fe2.s1)?1:0),ff2=((fe2.s0!==fe2.sm)?1:0)+((fe2.sm!==fe2.s1)?1:0);cx5.fillText('coarse: '+fc2+' crossings',240,108);cx5.fillText('fine: '+ff2+' crossings',240,140);}
+var sp2=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv4),transparent:true,opacity:0.95}));sp2.position.set(off(octCenter).x,off(octCenter).y+1.5,off(octCenter).z);sp2.scale.set(1.8,0.75,1);DG.safetyTest.add(sp2);
+/* collapsed quads */
+/* Adaptive mesh: safe octants use collapsed vertex, unsafe keep fine */
+(function(){
+  var thisOI=oiz*coarseN*coarseN+oiy*coarseN+oix;
+  function getV(cube){
+    var oi2=Math.floor(cube.iz/2)*coarseN*coarseN+Math.floor(cube.iy/2)*coarseN+Math.floor(cube.ix/2);
+    var oct2=octants[oi2];
+    if(oct2.safe) return {pos:off(oct2.collapsedPos),id:'o'+oi2};
+    else return {pos:off(cube.pos),id:'c'+cube.ix+','+cube.iy+','+cube.iz};
+  }
+  scE.forEach(function(e){
+    var cubes=getCubes(e.i1,e.i2);if(cubes.length<3)return;
+    if(!cubes.some(function(c){return c.ix===q.ix&&c.iy===q.iy&&c.iz===q.iz;}))return;
+    var raw=cubes.map(function(c){return getV(c);});
+    var uniq2=[],seen2={};raw.forEach(function(v){if(!seen2[v.id]){seen2[v.id]=true;uniq2.push(v);}});
+    if(uniq2.length<3)return;
+    var verts=uniq2.map(function(v){return v.pos;});
+    var geo2=new THREE.BufferGeometry();
+    var ps2=verts.length===4?new Float32Array([].concat(verts[0].toArray(),verts[1].toArray(),verts[2].toArray(),verts[0].toArray(),verts[2].toArray(),verts[3].toArray())):new Float32Array([].concat(verts[0].toArray(),verts[1].toArray(),verts[2].toArray()));
+    geo2.setAttribute('position',new THREE.BufferAttribute(ps2,3));geo2.computeVertexNormals();
+    DG.collapsedQuads.add(new THREE.Mesh(geo2,cqdM2));
+    DG.collapsedQuads.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([].concat(verts,[verts[0]])),cqdW2));
+  });
+})();
+/* Forced collapse in detail view */
+(function(){
+  function getFV2(cube){
+    var oi2=Math.floor(cube.iz/2)*coarseN*coarseN+Math.floor(cube.iy/2)*coarseN+Math.floor(cube.ix/2);
+    return {pos:off(octants[oi2].collapsedPos),id:'o'+oi2};
+  }
+  scE.forEach(function(e){
+    var cubes=getCubes(e.i1,e.i2);if(cubes.length<3)return;
+    if(!cubes.some(function(c){return c.ix===q.ix&&c.iy===q.iy&&c.iz===q.iz;}))return;
+    var raw=cubes.map(function(c){return getFV2(c);});
+    var uniq2=[],seen2={};raw.forEach(function(v){if(!seen2[v.id]){seen2[v.id]=true;uniq2.push(v);}});
+    if(uniq2.length<3)return;
+    var verts=uniq2.map(function(v){return v.pos;});
+    var geo2=new THREE.BufferGeometry();
+    var ps2=verts.length===4?new Float32Array([].concat(verts[0].toArray(),verts[1].toArray(),verts[2].toArray(),verts[0].toArray(),verts[2].toArray(),verts[3].toArray())):new Float32Array([].concat(verts[0].toArray(),verts[1].toArray(),verts[2].toArray()));
+    geo2.setAttribute('position',new THREE.BufferAttribute(ps2,3));geo2.computeVertexNormals();
+    DG.forcedCollapse.add(new THREE.Mesh(geo2,fcM));
+    DG.forcedCollapse.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([].concat(verts,[verts[0]])),fcW));
+  });
+})();}
+document.getElementById('dl').innerHTML='Cube '+(ci+1)+' <span>['+q.ix+','+q.iy+','+q.iz+']</span>';
+var di=document.getElementById('di');di.style.display='block';
+di.innerHTML='Hermite pts: <span class="val">'+q.hermite.length+'</span> &nbsp; Residual: <span class="val">'+q.residual.toFixed(6)+'</span><br>QEF: <span class="val">('+q.pos.x.toFixed(2)+', '+q.pos.y.toFixed(2)+', '+q.pos.z.toFixed(2)+')</span> &nbsp; Mass pt: <span class="val">('+q.centroid.x.toFixed(2)+', '+q.centroid.y.toFixed(2)+', '+q.centroid.z.toFixed(2)+')</span>';
+Object.keys(tM).forEach(function(id){var el=document.getElementById(id);if(el&&DG[tM[id]])DG[tM[id]].visible=el.checked;});}
+
+/* Sliders */
+var cubeSlider=document.getElementById('cubeSlider'),cubeSliderLabel=document.getElementById('cubeSliderLabel');
+cubeSlider.max=aCK.length;
+function updateCubeFilter(){var v=parseInt(cubeSlider.value);cubeSliderLabel.textContent=v===0?'all':v;['tangentPlanes','errorLines','massPoint','cubeBounds','errorField'].forEach(function(layer){pCV[layer].forEach(function(sg,i){sg.visible=v===0||(i===v-1);});});rebuildDetail(v>0?v-1:0);}
+cubeSlider.addEventListener('input',updateCubeFilter);
+var octSlider=document.getElementById('octantSlider'),octSliderLabel=document.getElementById('octantSliderLabel');
+function updateOctantFilter(){var v=parseInt(octSlider.value);octSliderLabel.textContent=v===0?'all':v;['collapsedQEF','residualColor','safetyTest'].forEach(function(layer){oV[layer].forEach(function(sg,i){if(sg)sg.visible=v===0||(i===v-1);});});}
+octSlider.addEventListener('input',updateOctantFilter);updateOctantFilter();
+
+/* Toggles */
+var tM={togGrid:'grid',togSphere:'sphere',togSignChange:'signChange',togHermite:'hermite',togQEF:'qef',togQuads:'quads',togCorners:'corners',togTangentPlanes:'tangentPlanes',togErrorLines:'errorLines',togMassPoint:'massPoint',togCubeBounds:'cubeBounds',togErrorField:'errorField',togCoarseGrid:'coarseGrid',togCollapsedQEF:'collapsedQEF',togCollapsedQuads:'collapsedQuads',togForcedCollapse:'forcedCollapse',togResidualColor:'residualColor',togSafetyTest:'safetyTest'};
+Object.keys(tM).forEach(function(id){var el=document.getElementById(id);if(el)el.addEventListener('change',function(e){G[tM[id]].visible=e.target.checked;if(DG[tM[id]])DG[tM[id]].visible=e.target.checked;});});
+rebuildDetail(0);
+
+/* Orbit */
+var mSph,dSph,mUpdOrbit,dUpdOrbit;
+function mkOrbit(canvas,cam,sph){var drag=false,prev={x:0,y:0};function upd(){cam.position.set(sph.r*Math.sin(sph.p)*Math.cos(sph.t),sph.r*Math.cos(sph.p),sph.r*Math.sin(sph.p)*Math.sin(sph.t));cam.lookAt(0,0,0);}sph._upd=upd;
+canvas.addEventListener('mousedown',function(e){drag=true;prev={x:e.clientX,y:e.clientY};});canvas.addEventListener('mousemove',function(e){if(!drag)return;sph.t-=(e.clientX-prev.x)*0.005;sph.p=Math.max(0.1,Math.min(Math.PI-0.1,sph.p+(e.clientY-prev.y)*0.005));prev={x:e.clientX,y:e.clientY};upd();});canvas.addEventListener('mouseup',function(){drag=false;});canvas.addEventListener('mouseleave',function(){drag=false;});canvas.addEventListener('wheel',function(e){sph.r=Math.max(1,Math.min(20,sph.r+e.deltaY*0.005));upd();});
+canvas.addEventListener('touchstart',function(e){if(e.touches.length===1){drag=true;prev={x:e.touches[0].clientX,y:e.touches[0].clientY};}},{passive:true});canvas.addEventListener('touchmove',function(e){if(!drag||e.touches.length!==1)return;sph.t-=(e.touches[0].clientX-prev.x)*0.005;sph.p=Math.max(0.1,Math.min(Math.PI-0.1,sph.p+(e.touches[0].clientY-prev.y)*0.005));prev={x:e.touches[0].clientX,y:e.touches[0].clientY};upd();},{passive:true});canvas.addEventListener('touchend',function(){drag=false;});upd();return sph;}
+mSph=mkOrbit(mR.domElement,mC,{t:Math.PI/4,p:Math.PI/3.5,r:11});
+dSph=mkOrbit(dR.domElement,dC,{t:Math.PI/4,p:Math.PI/3.5,r:2.5});
+
+function onResize(){var mw=mEl.clientWidth,mh=mEl.clientHeight;mC.aspect=mw/mh;mC.updateProjectionMatrix();mR.setSize(mw,mh);var dw=dEl.clientWidth,dh=dEl.clientHeight;if(dw>10){dC.aspect=dw/dh;dC.updateProjectionMatrix();dR.setSize(dw,dh);}}
+addEventListener('resize',onResize);onResize();
+function animate(){requestAnimationFrame(animate);G.qef.children.forEach(function(c){if(c.isMesh)c.quaternion.copy(mC.quaternion);});DG.qef.children.forEach(function(c){if(c.isMesh)c.quaternion.copy(dC.quaternion);});mR.render(mS,mC);dR.render(dS,dC);}
+animate();
+
+var presets=[
+  { /* (a) True Isosurface & Hermite Data */
+    name:'Hermite',
+    toggles:{togGrid:true,togCorners:true,togSphere:true,togSignChange:true,togHermite:true,togQEF:false,togTangentPlanes:false,togErrorLines:false,togMassPoint:false,togCubeBounds:false,togErrorField:false,togQuads:false,togCoarseGrid:false,togCollapsedQEF:false,togCollapsedQuads:false,togForcedCollapse:false,togResidualColor:false,togSafetyTest:false},
+    cube:0,octant:0,
+    mainCam:{t:0.55,p:1.05,r:10.5},detailCam:{t:0.5,p:1.0,r:2.5}
+  },
+  { /* (b) QEF Vertex Per Cube */
+    name:'QEF',
+    toggles:{togGrid:false,togCorners:false,togSphere:true,togSignChange:false,togHermite:true,togQEF:true,togTangentPlanes:true,togErrorLines:true,togMassPoint:false,togCubeBounds:true,togErrorField:false,togQuads:false,togCoarseGrid:false,togCollapsedQEF:false,togCollapsedQuads:false,togForcedCollapse:false,togResidualColor:false,togSafetyTest:false},
+    cube:3,octant:0,
+    mainCam:{t:0.6,p:1.2,r:10},detailCam:{t:0.6,p:0.9,r:2.3}
+  },
+  { /* (c) Quad Per Sign-Change Edge */
+    name:'Quads',
+    toggles:{togGrid:false,togCorners:false,togSphere:true,togSignChange:false,togHermite:false,togQEF:true,togTangentPlanes:false,togErrorLines:false,togMassPoint:false,togCubeBounds:false,togErrorField:false,togQuads:true,togCoarseGrid:false,togCollapsedQEF:false,togCollapsedQuads:false,togForcedCollapse:false,togResidualColor:false,togSafetyTest:false},
+    cube:0,octant:0,
+    mainCam:{t:0.85,p:1.05,r:12},detailCam:{t:0.5,p:1.1,r:2.5}
+  },
+  { /* (d) Edge Sign Safety Test */
+    name:'Safety',
+    toggles:{togGrid:false,togCorners:false,togSphere:true,togSignChange:false,togHermite:false,togQEF:false,togTangentPlanes:false,togErrorLines:false,togMassPoint:false,togCubeBounds:false,togErrorField:false,togQuads:false,togCoarseGrid:false,togCollapsedQEF:false,togCollapsedQuads:false,togForcedCollapse:true,togResidualColor:false,togSafetyTest:true},
+    cube:0,octant:14,
+    mainCam:{t:0.85,p:1.0,r:9},detailCam:{t:0.7,p:1.1,r:3.2}
+  },
+  { /* (e) Octree Collapse */
+    name:'Collapse',
+    toggles:{togGrid:false,togCorners:false,togSphere:false,togSignChange:false,togHermite:false,togQEF:true,togTangentPlanes:false,togErrorLines:false,togMassPoint:false,togCubeBounds:false,togErrorField:false,togQuads:false,togCoarseGrid:true,togCollapsedQEF:true,togCollapsedQuads:true,togForcedCollapse:false,togResidualColor:false,togSafetyTest:false},
+    cube:0,octant:0,
+    mainCam:{t:0.65,p:0.9,r:12},detailCam:{t:0.55,p:0.9,r:2.2}
+  }
+];
+function applyPreset(pi){
+  var p=presets[pi];
+  Object.keys(p.toggles).forEach(function(id){
+    var el=document.getElementById(id);if(!el)return;
+    el.checked=p.toggles[id];
+    G[tM[id]].visible=p.toggles[id];
+    if(DG[tM[id]])DG[tM[id]].visible=p.toggles[id];
+  });
+  cubeSlider.value=p.cube;updateCubeFilter();
+  octSlider.value=p.octant;updateOctantFilter();
+  mSph.t=p.mainCam.t;mSph.p=p.mainCam.p;mSph.r=p.mainCam.r;mSph._upd();
+  dSph.t=p.detailCam.t;dSph.p=p.detailCam.p;dSph.r=p.detailCam.r;dSph._upd();
+}
+</script>
+</body>
+</html>
